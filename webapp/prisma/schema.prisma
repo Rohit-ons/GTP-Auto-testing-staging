@@ -1,0 +1,105 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// Authentication Models
+model User {
+  id        String   @id @default(cuid())
+  name      String?
+  email     String?  @unique
+  password  String?  // Hashed
+  role      String   @default("ENGINEER") // ADMIN, ENGINEER, APPROVER
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cablesCreated    CableModel[] @relation("CreatedCables")
+  approvalsHandled CableModel[] @relation("ApprovedCables")
+}
+
+// Master Data Models
+model Material {
+  id            String   @id @default(cuid())
+  name          String   // e.g., Copper, Aluminum, XLPE
+  category      String   // CONDUCTOR, INSULATION, SHEATH, ARMOUR
+  density       Float?   // kg/m3
+  resistivity20 Float?   // Ohm.mm2/m @ 20C
+  alpha         Float?   // Temp coefficient (1/C)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  cablesConductor CableModel[] @relation("CableConductorMaterial")
+  cablesInsulation CableModel[] @relation("CableInsulationMaterial")
+  cablesArmour     CableModel[] @relation("CableArmourMaterial")
+  cablesOuterSheath CableModel[] @relation("CableOuterSheathMaterial")
+}
+
+model StandardRule {
+  id          String   @id @default(cuid())
+  standardRef String   // e.g., IS 7098-1
+  ruleType    String   // e.g., MIN_INSULATION_THICKNESS
+  areaMin     Float?
+  areaMax     Float?
+  voltage     Float?
+  value       Float    // The rule value
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Cable Model SKU
+model CableModel {
+  id           String   @id @default(cuid())
+  name         String
+  voltageRating Float    // in kV (e.g., 1.1)
+  numberOfCores Float    // 1, 3, 3.5, 4
+  status       String   @default("DRAFT") // DRAFT, PENDING, APPROVED, REJECTED
+  
+  // Conductor
+  conductorAreaMain     Float
+  conductorAreaNeutral  Float?
+  conductorClass        String   // Class 2
+  conductorMaterialId   String
+  conductorMaterial     Material @relation("CableConductorMaterial", fields: [conductorMaterialId], references: [id])
+  
+  // Insulation
+  insulationMaterialId  String
+  insulationMaterial    Material @relation("CableInsulationMaterial", fields: [insulationMaterialId], references: [id])
+  insulationThicknessMain Float
+  insulationThicknessNeutral Float?
+  
+  // Inner Sheath
+  innerSheathType       String?  // EXTRUDED, TAPE
+  innerSheathThickness  Float?
+  
+  // Armour
+  armourMaterialId      String?
+  armourMaterial        Material? @relation("CableArmourMaterial", fields: [armourMaterialId], references: [id])
+  armourType            String?  // ROUND_WIRE, FLAT_STRIP
+  armourThickness       Float?
+  
+  // Outer Sheath
+  outerSheathMaterialId String
+  outerSheathMaterial   Material @relation("CableOuterSheathMaterial", fields: [outerSheathMaterialId], references: [id])
+  outerSheathThickness  Float
+  
+  // Computed / Calculated Results (Cached)
+  computedOverallDiameter Float?
+  computedWeight          Float?
+  computedDcResistance20  Float?
+  computedAcResistance90  Float?
+  
+  // Workflow
+  createdById  String
+  createdBy    User     @relation("CreatedCables", fields: [createdById], references: [id])
+  approvedById String?
+  approvedBy   User?    @relation("ApprovedCables", fields: [approvedById], references: [id])
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
