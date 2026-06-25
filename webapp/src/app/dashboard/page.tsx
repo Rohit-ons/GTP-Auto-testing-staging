@@ -1,8 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import DashboardCharts from "@/components/DashboardCharts";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/authOptions";
 
 export default async function DashboardPage() {
+  const session = await getServerSession(authOptions);
   const totalCables = await prisma.cableModel.count();
   const approvedCables = await prisma.cableModel.count({
     where: { status: "APPROVED" },
@@ -42,7 +45,7 @@ export default async function DashboardPage() {
       <div className="page-header">
         <div className="page-header-content">
           <h1 className="page-header-title">
-            Welcome back, {user?.name || "User"}
+            Welcome back, {session?.user?.name || "User"}
           </h1>
           <p className="page-header-subtitle">
             Here&apos;s what&apos;s happening with your cable designs today.
