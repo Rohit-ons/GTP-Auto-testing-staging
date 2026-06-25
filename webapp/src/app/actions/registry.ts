@@ -9,7 +9,7 @@ export async function getRegistry() {
   return prisma.parameterDefinition.findMany({ orderBy: { ordering: "asc" } });
 }
 
-export async function toggleParameter(id: string): Promise<void> {
+export async function toggleParameter(id: string): Promise<{ success: boolean; error?: string }> {
   const session = await getServerSession(authOptions);
   if ((session?.user as { role?: string })?.role !== "ADMIN") return { success: false, error: "Unauthorized" };
   const p = await prisma.parameterDefinition.findUnique({ where: { id } });
