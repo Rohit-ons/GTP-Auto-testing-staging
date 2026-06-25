@@ -7,7 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 export default function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/";
+  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
   
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -32,7 +32,7 @@ export default function LoginForm() {
         router.push(callbackUrl);
         router.refresh();
       }
-    } catch (err) {
+    } catch {
       setError("An unexpected error occurred");
     } finally {
       setLoading(false);
@@ -42,12 +42,13 @@ export default function LoginForm() {
   return (
     <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
       {error && (
-        <div style={{ background: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)', padding: '0.75rem', borderRadius: 'var(--radius-md)', fontSize: '0.875rem', textAlign: 'center' }}>
+        <div className="alert alert-danger">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
           {error}
         </div>
       )}
-      <div>
-        <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem' }}>Email Address</label>
+      <div className="form-group">
+        <label className="form-label">Email Address</label>
         <input 
           type="email" 
           required 
@@ -55,10 +56,11 @@ export default function LoginForm() {
           placeholder="admin@cablegen.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          autoComplete="email"
         />
       </div>
-      <div>
-        <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem' }}>Password</label>
+      <div className="form-group">
+        <label className="form-label">Password</label>
         <input 
           type="password" 
           required 
@@ -66,19 +68,20 @@ export default function LoginForm() {
           placeholder="••••••••"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          autoComplete="current-password"
         />
       </div>
       <button 
         type="submit" 
         disabled={loading}
-        className="btn btn-primary" 
-        style={{ marginTop: '0.5rem', padding: '0.75rem' }}
+        className="btn btn-primary btn-lg w-full" 
+        style={{ marginTop: '0.5rem' }}
       >
-        {loading ? "Signing in..." : "Sign In"}
+        {loading ? <><span className="spinner spinner-sm" /> Signing in...</> : "Sign In"}
       </button>
       
-      <div style={{ marginTop: '1rem', textAlign: 'center', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-        <p>Default Admin: admin@cablegen.com / admin123</p>
+      <div style={{ textAlign: 'center', fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
+        <p>Demo: admin@cablegen.com / admin123</p>
       </div>
     </form>
   );

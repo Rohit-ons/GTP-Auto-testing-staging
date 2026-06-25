@@ -6,6 +6,7 @@ import { bulkImportMaterials } from "@/app/actions/materials";
 
 export default function BulkImportMaterials() {
   const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const downloadSample = () => {
     const data = [
@@ -26,6 +27,7 @@ export default function BulkImportMaterials() {
     if (!file) return;
 
     setLoading(true);
+    setMessage(null);
     const reader = new FileReader();
     reader.onload = async (evt) => {
       try {
@@ -37,36 +39,47 @@ export default function BulkImportMaterials() {
 
         const res = await bulkImportMaterials(data);
         if (res.success) {
-          alert(`Successfully imported ${res.count} materials!`);
+          setMessage({ type: "success", text: `Successfully imported ${res.count} materials!` });
         } else {
-          alert(`Import failed: ${res.error}`);
+          setMessage({ type: "error", text: `Import failed: ${res.error}` });
         }
-      } catch (err) {
-        alert("Error parsing Excel file.");
+      } catch {
+        setMessage({ type: "error", text: "Error parsing Excel file." });
       } finally {
         setLoading(false);
       }
     };
     reader.readAsBinaryString(file);
+    e.target.value = "";
   };
 
   return (
-    <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-      <button onClick={downloadSample} className="btn btn-outline" style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}>
-        Download Template
+    <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+      {message && (
+        <span style={{ fontSize: "0.85rem", fontWeight: 500, color: message.type === "success" ? "var(--emerald-600)" : "var(--red-600)", marginRight: "0.5rem" }}>
+          {message.text}
+        </span>
+      )}
+      
+      <button onClick={downloadSample} className="btn btn-neutral" type="button" disabled={loading} title="Download Excel Template">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Template
       </button>
-      <div style={{ position: 'relative' }}>
+      
+      <label className={`btn btn-neutral ${loading ? "disabled" : ""}`} style={{ cursor: loading ? "default" : "pointer", margin: 0 }}>
         <input 
           type="file" 
           accept=".xlsx, .xls" 
           onChange={handleFile}
-          style={{ opacity: 0, position: 'absolute', inset: 0, cursor: 'pointer' }}
           disabled={loading}
+          style={{ display: "none" }}
         />
-        <button className="btn btn-primary" style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}>
-          {loading ? "Importing..." : "Bulk Import Excel"}
-        </button>
-      </div>
+        {loading ? (
+          <><span className="spinner spinner-sm"></span> Importing...</>
+        ) : (
+          <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Import CSV</>
+        )}
+      </label>
     </div>
   );
 }

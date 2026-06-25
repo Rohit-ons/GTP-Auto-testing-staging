@@ -1,105 +1,269 @@
+// Parametric Cable Model & GTP Generator — data model
+// Design notes:
+//  - Registry-driven (D1): ParameterDefinition describes every GTP element + its IS source/formula.
+//  - Versioned Standards Master (D2): IS 7098 / IS 8130 dimension tables stored as data, by edition.
+//  - Single-SKU core (D6): one CableModel = one cable size. Outputs stored as a reproducible snapshot.
+//  - SQLite in dev; schema kept PostgreSQL-compatible (Strings instead of enums, no DB-specific types).
+
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "sqlite"
-  url      = "file:./dev.db"
+  url      = env("DATABASE_URL")
 }
 
-// Authentication Models
+// =====================================================================
+// Auth / Users
+// =====================================================================
 model User {
   id        String   @id @default(cuid())
   name      String?
   email     String?  @unique
-  password  String?  // Hashed
-  role      String   @default("ENGINEER") // ADMIN, ENGINEER, APPROVER
+  password  String? // bcrypt hash
+  role      String   @default("ENGINEER") // ENGINEER | SALES | COSTING | APPROVER | MANAGEMENT | ADMIN
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  cablesCreated    CableModel[] @relation("CreatedCables")
-  approvalsHandled CableModel[] @relation("ApprovedCables")
+  isActive    Boolean  @default(true)
+  lastLoginAt DateTime?
+  avatarUrl   String?
+  department  String?
+  phone       String?
+
+  cablesCreated  CableModel[] @relation("CreatedCables")
+  cablesApproved CableModel[] @relation("ApprovedCables")
+  auditLogs      AuditLog[]
 }
 
-// Master Data Models
-model Material {
+// =====================================================================
+// Standards Master (versioned) — the digitised IS tables
+// =====================================================================
+model Standard {
+  id        String   @id @default(cuid())
+  code      String // e.g. "IS 7098-1", "IS 8130"
+  edition   String // e.g. "1988", "2013", "2025"
+  title     String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  conductorSpecs   ConductorSpec[]
+  insulationSpecs  InsulationSpec[]
+  innerSheathSpecs InnerSheathSpec[]
+  outerSheathSpecs OuterSheathSpec[]
+  armourSpecs      ArmourSpec[]
+  customRules      CustomStandardRule[]
+
+  @@unique([code, edition])
+}
+
+/// Phase H — generic "parameter ↔ standard ↔ condition ↔ value" master.
+/// Lets an admin add any IS rule manually without a code change:
+///   "For parameter `outerSheath.minThickness`, when diaUnderSheath is 40–45 mm,
+///    use value 1.88 per IS 7098 Table 8."
+/// The engine consults these BEFORE the legacy spec tables → priority overlay.
+model CustomStandardRule {
   id            String   @id @default(cuid())
-  name          String   // e.g., Copper, Aluminum, XLPE
-  category      String   // CONDUCTOR, INSULATION, SHEATH, ARMOUR
-  density       Float?   // kg/m3
-  resistivity20 Float?   // Ohm.mm2/m @ 20C
-  alpha         Float?   // Temp coefficient (1/C)
+  standardId    String
+  standard      Standard @relation(fields: [standardId], references: [id], onDelete: Cascade)
+  parameterKey  String   // e.g. "conductor.maxResistance20", "outerSheath.minThickness"
+  conditionJson String   // JSON: e.g. {"material":"AL","area":185} or {"diaMin":40,"diaMax":45}
+  valueText     String   // the resolved value as text (number, label, or composite)
+  priority      Int      @default(100) // lower = wins
+  description   String?  // free-text clause / source
+  isActive      Boolean  @default(true)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  // Relations
-  cablesConductor CableModel[] @relation("CableConductorMaterial")
-  cablesInsulation CableModel[] @relation("CableInsulationMaterial")
-  cablesArmour     CableModel[] @relation("CableArmourMaterial")
-  cablesOuterSheath CableModel[] @relation("CableOuterSheathMaterial")
+  @@index([parameterKey, isActive])
 }
 
-model StandardRule {
-  id          String   @id @default(cuid())
-  standardRef String   // e.g., IS 7098-1
-  ruleType    String   // e.g., MIN_INSULATION_THICKNESS
-  areaMin     Float?
-  areaMax     Float?
-  voltage     Float?
-  value       Float    // The rule value
-  description String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+/// IS 8130 Table 1/2 — min wires + max DC resistance @20C, keyed by area/material/class/shape.
+model ConductorSpec {
+  id              String @id @default(cuid())
+  standardId      String
+  standard        Standard @relation(fields: [standardId], references: [id], onDelete: Cascade)
+  material        String // CU | AL
+  conductorClass  String // 1 | 2 | 5 | 6
+  shape           String // CIRCULAR | SHAPED | FLEXIBLE
+  area            Float // mm^2
+  minWires        Int
+  maxResistance20 Float // ohm/km @ 20C
+
+  @@unique([standardId, material, conductorClass, shape, area])
+  @@index([material, area])
 }
 
-// Cable Model SKU
+/// IS 7098 insulation nominal thickness, keyed by voltage + area band.
+model InsulationSpec {
+  id               String @id @default(cuid())
+  standardId       String
+  standard         Standard @relation(fields: [standardId], references: [id], onDelete: Cascade)
+  insulationType   String // XLPE | PVC
+  voltage          Float // V (e.g. 1100)
+  areaMin          Float
+  areaMax          Float
+  nominalThickness Float // mm
+
+  @@index([standardId, insulationType, voltage])
+}
+
+/// IS 7098 inner-sheath minimum thickness, keyed by laid-up diameter band.
+model InnerSheathSpec {
+  id           String @id @default(cuid())
+  standardId   String
+  standard     Standard @relation(fields: [standardId], references: [id], onDelete: Cascade)
+  diaMin       Float
+  diaMax       Float
+  minThickness Float // mm
+
+  @@index([standardId])
+}
+
+/// IS 7098 Table 8 — outer-sheath nominal + minimum thickness, keyed by diameter under sheath.
+model OuterSheathSpec {
+  id               String @id @default(cuid())
+  standardId       String
+  standard         Standard @relation(fields: [standardId], references: [id], onDelete: Cascade)
+  diaMin           Float
+  diaMax           Float
+  nominalThickness Float
+  minThickness     Float
+
+  @@index([standardId])
+}
+
+/// IS 7098 Table 6 — armour dimensions, keyed by diameter under armour + armour type.
+model ArmourSpec {
+  id          String @id @default(cuid())
+  standardId  String
+  standard    Standard @relation(fields: [standardId], references: [id], onDelete: Cascade)
+  armourType  String // ROUND_WIRE | FLAT_STRIP
+  diaMin      Float
+  diaMax      Float
+  dimension   String // human label e.g. "4.00 x 0.80" or "1.40"
+  nominalDim  Float // governing dimension in mm (wire dia or strip thickness)
+
+  @@index([standardId, armourType])
+}
+
+// =====================================================================
+// Material Master (physical + descriptive)
+// =====================================================================
+model Material {
+  id            String   @id @default(cuid())
+  code          String   @unique // CU, AL, XLPE, PVC_ST2, PVC_ST3, PVC_TYPE_D, GS_STRIP, GS_WIRE
+  name          String
+  category      String // CONDUCTOR | INSULATION | SHEATH | ARMOUR | FILLER
+  density       Float? // kg/m^3
+  resistivity20 Float? // ohm.mm^2/m @ 20C
+  alpha         Float? // 1/C
+  gtpText       String? // descriptive phrase used on the GTP sheet
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  conductorOf    CableModel[] @relation("CableConductor")
+  insulationOf   CableModel[] @relation("CableInsulation")
+  innerSheathOf  CableModel[] @relation("CableInnerSheath")
+  outerSheathOf  CableModel[] @relation("CableOuterSheath")
+}
+
+// =====================================================================
+// Parameter Registry (D1) — metadata describing every GTP element
+// =====================================================================
+model ParameterDefinition {
+  id             String   @id @default(cuid())
+  key            String   @unique // e.g. conductor.maxDcResistance20
+  rowNo          String? // GTP serial label, e.g. "37"
+  label          String // GTP "DESCRIPTION" text
+  unit           String?
+  section        String // CONDUCTOR | INSULATION | INNER_SHEATH | ARMOURING | OUTER_SHEATH | ELECTRICAL | FRLS_TESTS | GENERAL
+  bucket         String // INPUT | CALCULATED | MASTER_STD | MASTER_CONST
+  standardRef    String? // IS clause / table reference
+  formulaKey     String? // engine formula/lookup key
+  sourceNote     String?
+  visibilityRole String   @default("ALL") // ALL | COST (reserved for Phase 2 costing rows)
+  ordering       Int      @default(0)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+// =====================================================================
+// Cable SKU (single size) + reproducible output snapshot
+// =====================================================================
 model CableModel {
-  id           String   @id @default(cuid())
-  name         String
-  voltageRating Float    // in kV (e.g., 1.1)
-  numberOfCores Float    // 1, 3, 3.5, 4
-  status       String   @default("DRAFT") // DRAFT, PENDING, APPROVED, REJECTED
-  
-  // Conductor
-  conductorAreaMain     Float
-  conductorAreaNeutral  Float?
-  conductorClass        String   // Class 2
-  conductorMaterialId   String
-  conductorMaterial     Material @relation("CableConductorMaterial", fields: [conductorMaterialId], references: [id])
-  
-  // Insulation
-  insulationMaterialId  String
-  insulationMaterial    Material @relation("CableInsulationMaterial", fields: [insulationMaterialId], references: [id])
-  insulationThicknessMain Float
-  insulationThicknessNeutral Float?
-  
-  // Inner Sheath
-  innerSheathType       String?  // EXTRUDED, TAPE
-  innerSheathThickness  Float?
-  
-  // Armour
-  armourMaterialId      String?
-  armourMaterial        Material? @relation("CableArmourMaterial", fields: [armourMaterialId], references: [id])
-  armourType            String?  // ROUND_WIRE, FLAT_STRIP
-  armourThickness       Float?
-  
-  // Outer Sheath
+  id     String @id @default(cuid())
+  name   String
+  code   String? @unique
+  status String @default("DRAFT") // DRAFT | PENDING | APPROVED | REJECTED | REVISED
+
+  // Standard pinning (reproducibility)
+  standardEdition  String @default("1988") // IS 7098-1 edition used
+  standardsProfile String @default("IS_STRICT") // IS_STRICT | POLYVION_HOUSE
+
+  // ---- INPUT knobs (the only fields a user tweaks) ----
+  voltageGrade  Float  @default(1100) // V
+  numberOfCores Float // 1, 2, 3, 3.5, 4, 5, 7, ...
+  areaMain      Float // mm^2
+  areaNeutral   Float? // mm^2 (3.5C / reduced neutral)
+
+  conductorMaterialId String
+  conductorMaterial   Material @relation("CableConductor", fields: [conductorMaterialId], references: [id])
+  conductorClass      String   @default("2")
+  conductorShape      String   @default("CIRCULAR") // CIRCULAR | SHAPED | FLEXIBLE
+
+  insulationMaterialId String
+  insulationMaterial   Material @relation("CableInsulation", fields: [insulationMaterialId], references: [id])
+
+  armoured    Boolean @default(true)
+  armourType  String? // ROUND_WIRE | FLAT_STRIP
+
+  innerSheathMaterialId String?
+  innerSheathMaterial   Material? @relation("CableInnerSheath", fields: [innerSheathMaterialId], references: [id])
+
   outerSheathMaterialId String
-  outerSheathMaterial   Material @relation("CableOuterSheathMaterial", fields: [outerSheathMaterialId], references: [id])
-  outerSheathThickness  Float
-  
-  // Computed / Calculated Results (Cached)
-  computedOverallDiameter Float?
-  computedWeight          Float?
-  computedDcResistance20  Float?
-  computedAcResistance90  Float?
-  
-  // Workflow
+  outerSheathMaterial   Material @relation("CableOuterSheath", fields: [outerSheathMaterialId], references: [id])
+  outerSheathGrade      String   @default("PVC_ST2") // PVC_ST2 | FRLS | FRLSH | PVC_ST3
+  outerSheathColour     String   @default("Black")
+
+  drumLength Float? // meters
+  customer   String?
+  project    String?
+
+  // ---- Output snapshot (reproducible GTP) ----
+  computedJson  String? // JSON: full GTP rows + intermediate diameters
+  overridesJson String? // JSON: { paramKey: { value, reason, byUserId } }
+
+  // ---- Workflow ----
   createdById  String
-  createdBy    User     @relation("CreatedCables", fields: [createdById], references: [id])
+  createdBy    User    @relation("CreatedCables", fields: [createdById], references: [id])
   approvedById String?
-  approvedBy   User?    @relation("ApprovedCables", fields: [approvedById], references: [id])
-  
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  approvedBy   User?   @relation("ApprovedCables", fields: [approvedById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([areaMain, numberOfCores])
+}
+
+// =====================================================================
+// Audit Log
+// =====================================================================
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  entity    String // e.g. "CableModel", "OuterSheathSpec"
+  entityId  String
+  action    String // CREATE | UPDATE | APPROVE | OVERRIDE | DELETE
+  field     String?
+  oldValue  String?
+  newValue  String?
+  createdAt DateTime @default(now())
+
+  @@index([entity, entityId])
 }

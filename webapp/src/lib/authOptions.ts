@@ -30,11 +30,23 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
+        // Reject inactive users
+        if (!user.isActive) {
+          return null;
+        }
+
+        // Track last login time
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { lastLoginAt: new Date() }
+        });
+
         return {
           id: user.id,
           email: user.email,
           name: user.name,
-          role: user.role
+          role: user.role,
+          isActive: user.isActive
         };
       }
     })
@@ -42,15 +54,21 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.id = user.id;
-        token.role = (user as any).role;
+        const u = user as { id?: string; role?: string; name?: string | null; email?: string | null };
+        token.id = u.id;
+        token.role = u.role;
+        token.name = u.name;
+        token.email = u.email;
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
-        (session.user as any).id = token.id;
-        (session.user as any).role = token.role;
+        const sessionUser = session.user as { id?: string; role?: unknown; name?: string | null; email?: string | null };
+        sessionUser.id = token.id as string;
+        sessionUser.role = token.role;
+        sessionUser.name = token.name as string;
+        sessionUser.email = token.email as string;
       }
       return session;
     }
@@ -59,6 +77,6 @@ export const authOptions: NextAuthOptions = {
     strategy: "jwt",
   },
   pages: {
-    signIn: '/login', // We will build a custom login page
+    signIn: '/login',
   }
 };

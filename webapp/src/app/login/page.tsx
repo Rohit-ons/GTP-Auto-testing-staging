@@ -1,12 +1,19 @@
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/authOptions";
+import { redirect } from "next/navigation";
 import LoginForm from "./LoginForm";
 
-export default function LoginPage() {
+export default async function LoginPage() {
+  const session = await getServerSession(authOptions);
+  if (session) redirect('/dashboard');
+  
   return (
-    <div className="container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 'calc(100vh - 10rem)' }}>
-      <div className="glass-card" style={{ width: '100%', maxWidth: '400px', padding: '2.5rem' }}>
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <h1 style={{ fontSize: '1.75rem', fontWeight: 700, marginBottom: '0.5rem' }}>Welcome Back</h1>
-          <p style={{ color: 'var(--text-secondary)' }}>Sign in to manage cable models</p>
+    <div className="login-page">
+      <div className="login-card">
+        <div className="login-logo">
+          <div className="sidebar-logo" style={{ width: 48, height: 48, fontSize: '1.25rem' }}>P</div>
+          <h1>Parametric Cable Engine</h1>
+          <p>Sign in to your account to continue</p>
         </div>
         <LoginForm />
       </div>

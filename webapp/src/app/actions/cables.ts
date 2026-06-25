@@ -4,128 +4,100 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
-import { 
-  calculateConductorDCResistance20, 
-  calculateConductorACResistance, 
-  calculateApproximateConductorDiameter, 
-  calculateOverallDiameter 
-} from "@/lib/engines/calculation";
+import { buildGtp } from "@/lib/engine/gtp";
+import { buildDbProvider } from "@/lib/standards/dbProvider";
+import type { CableInput, Overrides } from "@/lib/engine/types";
 
-export async function createCable(data: any) {
+const APPROVER_ROLES = ["ADMIN", "APPROVER", "MANAGEMENT"];
+
+/** Create a cable SKU from design inputs, snapshotting the generated GTP for reproducibility. */
+export async function createCable(input: CableInput, overrides: Overrides = {}) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      throw new Error("Unauthorized");
-    }
+    if (!session?.user) return { success: false, error: "Unauthorized" };
+    const userId = (session.user as { id?: string }).id as string;
+
+    const edition = input.standardEdition ?? "1988";
+    const std = await buildDbProvider(prisma, edition);
+    const sheet = buildGtp(input, std, overrides);
+
+    const [cond, ins, inner, outer] = await Promise.all([
+      prisma.material.findUnique({ where: { code: input.conductorMaterial } }),
+      prisma.material.findUnique({ where: { code: input.insulationCode } }),
+      input.innerSheathCode ? prisma.material.findUnique({ where: { code: input.innerSheathCode } }) : Promise.resolve(null),
+      prisma.material.findUnique({ where: { code: input.outerSheathCode } }),
+    ]);
+    if (!cond || !ins || !outer) return { success: false, error: "Material code not found in master" };
+
+    const name = `${input.numberOfCores}C x ${input.areaMain}mm² ${cond.name} ${input.insulationCode}${input.armoured ? " Armd" : ""} ${input.outerSheathGrade}`;
 
     const cable = await prisma.cableModel.create({
       data: {
-        name: `${data.cores}C x ${data.area}mm² ${data.conductorName || 'Cable'}`,
-        voltageRating: 1.1, // Default LV
-        numberOfCores: parseFloat(data.cores),
-        conductorAreaMain: parseFloat(data.area),
-        conductorClass: "Class 2", // Standard default
-        conductorMaterialId: data.conductorMaterialId,
-        insulationMaterialId: data.insulationMaterialId,
-        insulationThicknessMain: parseFloat(data.insulationThk),
-        innerSheathThickness: parseFloat(data.innerSheathThk),
-        armourThickness: parseFloat(data.armourThk),
-        outerSheathThickness: parseFloat(data.outerSheathThk),
-        outerSheathMaterialId: data.outerSheathMaterialId,
-        
-        computedOverallDiameter: parseFloat(data.overallDia),
-        computedDcResistance20: parseFloat(data.r20),
-        computedAcResistance90: parseFloat(data.r90),
-        
-        createdById: (session.user as any).id,
-        status: "PENDING"
-      }
+        name,
+        status: "PENDING",
+        standardEdition: edition,
+        standardsProfile: input.standardsProfile ?? "IS_STRICT",
+        voltageGrade: input.voltageGrade,
+        numberOfCores: input.numberOfCores,
+        areaMain: input.areaMain,
+        areaNeutral: input.areaNeutral ?? null,
+        conductorMaterialId: cond.id,
+        conductorClass: input.conductorClass,
+        conductorShape: input.conductorShape,
+        insulationMaterialId: ins.id,
+        armoured: input.armoured,
+        armourType: input.armourType ?? null,
+        innerSheathMaterialId: inner?.id ?? null,
+        outerSheathMaterialId: outer.id,
+        outerSheathGrade: input.outerSheathGrade,
+        outerSheathColour: input.outerSheathColour ?? "Black",
+        drumLength: input.drumLength ?? null,
+        customer: input.customer ?? null,
+        project: input.project ?? null,
+        computedJson: JSON.stringify(sheet),
+        overridesJson: Object.keys(overrides).length ? JSON.stringify(overrides) : null,
+        createdById: userId,
+      },
     });
 
-    revalidatePath("/admin/cables");
-    return { success: true, cable };
-  } catch (error: any) {
-    console.error("Create Cable Error:", error);
-    return { success: false, error: error.message };
+    await prisma.auditLog.create({
+      data: { userId, entity: "CableModel", entityId: cable.id, action: "CREATE" },
+    });
+
+    // Audit each standard override individually for traceability.
+    for (const [rowNo, ov] of Object.entries(overrides)) {
+      await prisma.auditLog.create({
+        data: { userId, entity: "CableModel", entityId: cable.id, action: "OVERRIDE", field: rowNo, newValue: ov.value, oldValue: ov.reason ?? null },
+      });
+    }
+
+    revalidatePath("/dashboard/cables");
+    return { success: true, id: cable.id };
+  } catch (error: unknown) {
+    console.error("createCable error:", error);
+    return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
   }
 }
 
 export async function approveCable(id: string) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user || (session.user as any).role === "ENGINEER") {
-      throw new Error("Unauthorized - Approval requires Admin/Approver role");
+    const role = (session?.user as { role?: string })?.role;
+    if (!session?.user || (role && !APPROVER_ROLES.includes(role))) {
+      return { success: false, error: "Unauthorized — requires Approver/Admin/Management" };
     }
-
-    const cable = await prisma.cableModel.update({
-      where: { id },
-      data: {
-        status: "APPROVED",
-        approvedById: (session.user as any).id
-      }
-    });
-
-    revalidatePath("/admin/cables");
-    revalidatePath(`/admin/cables/${id}`);
-    return { success: true, cable };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+    const userId = (session.user as { id?: string }).id as string;
+    await prisma.cableModel.update({ where: { id }, data: { status: "APPROVED", approvedById: userId } });
+    await prisma.auditLog.create({ data: { userId, entity: "CableModel", entityId: id, action: "APPROVE" } });
+    revalidatePath("/dashboard/cables");
+    revalidatePath(`/dashboard/cables/${id}`);
+    return { success: true };
+  } catch (error: unknown) {
+    return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
   }
 }
 
-export async function bulkImportCables(rows: any[]) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) throw new Error("Unauthorized");
-
-    const conductors = await prisma.material.findMany({ where: { category: "CONDUCTOR" } });
-    const insulators = await prisma.material.findMany({ where: { category: "INSULATION" } });
-    const sheaths = await prisma.material.findMany({ where: { category: "SHEATH" } });
-
-    for (const row of rows) {
-      const cores = parseFloat(row.cores);
-      const area = parseFloat(row.area);
-      const insulationThk = parseFloat(row.insulationThk);
-      const innerSheathThk = parseFloat(row.innerSheathThk);
-      const armourThk = parseFloat(row.armourThk);
-      const outerSheathThk = parseFloat(row.outerSheathThk);
-
-      const condDia = calculateApproximateConductorDiameter(area);
-      const overallDia = calculateOverallDiameter(condDia, insulationThk, innerSheathThk, armourThk, outerSheathThk, cores);
-      
-      const condMat = conductors.find(c => c.name.toLowerCase() === row.conductorMaterial?.toLowerCase()) || conductors[0];
-      const r20 = calculateConductorDCResistance20(condMat.resistivity20 || 0, area);
-      const r90 = calculateConductorACResistance(r20, condMat.alpha || 0, 90);
-      
-      await prisma.cableModel.create({
-        data: {
-          name: `${cores}C x ${area}mm² ${condMat.name}`,
-          voltageRating: 1.1,
-          numberOfCores: cores,
-          conductorAreaMain: area,
-          conductorClass: "Class 2",
-          conductorMaterialId: condMat.id,
-          insulationMaterialId: insulators[0].id,
-          insulationThicknessMain: insulationThk,
-          innerSheathThickness: innerSheathThk,
-          armourThickness: armourThk,
-          outerSheathThickness: outerSheathThk,
-          outerSheathMaterialId: sheaths[0].id,
-          
-          computedOverallDiameter: parseFloat(overallDia.toFixed(2)),
-          computedDcResistance20: parseFloat(r20.toFixed(4)),
-          computedAcResistance90: parseFloat(r90.toFixed(4)),
-          
-          createdById: (session.user as any).id,
-          status: "PENDING"
-        }
-      });
-    }
-
-    revalidatePath("/admin/cables");
-    return { success: true, count: rows.length };
-  } catch (error: any) {
-    console.error("Bulk Import Error:", error);
-    return { success: false, error: error.message };
-  }
+/** Form-action wrapper (returns void) for use directly in <form action={...}>. */
+export async function approveCableForm(id: string): Promise<void> {
+  await approveCable(id);
 }

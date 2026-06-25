@@ -1,87 +1,78 @@
 import { NextResponse } from "next/server";
 import puppeteer from "puppeteer";
+import type { GtpSheet } from "@/lib/engine/types";
+
+function esc(s: string): string {
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
 
 export async function POST(req: Request) {
   try {
-    const data = await req.json();
+    const { sheet, fileName } = (await req.json()) as { sheet: GtpSheet; fileName?: string };
+    if (!sheet?.rows) return NextResponse.json({ error: "No sheet provided" }, { status: 400 });
 
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
-    });
+    const rowsHtml = sheet.rows
+      .map((r) =>
+        r.section
+          ? `<tr class="section"><td>${esc(r.rowNo)}</td><td colspan="3">${esc(r.label)}</td></tr>`
+          : `<tr><td>${esc(r.rowNo)}</td><td>${esc(r.label)}</td><td>${esc(r.unit ?? "")}</td><td>${esc(r.value)}</td></tr>`,
+      )
+      .join("");
+
+    const html = `
+      <html><head><style>
+        body { font-family: 'Inter', Arial, sans-serif; color: #1e293b; padding: 32px; font-size: 12px; }
+        .head { text-align:center; margin-bottom: 16px; }
+        .head h1 { font-size: 15px; margin: 0; }
+        .head .sub { font-size: 11px; color:#475569; }
+        .meta { font-size: 11px; margin-bottom: 12px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #cbd5e1; padding: 5px 7px; text-align: left; vertical-align: top; }
+        th { background:#f1f5f9; }
+        tr.section td { background:#e2e8f0; font-weight: 700; }
+        .foot { margin-top: 24px; font-size: 10.5px; }
+        .foot .notes div { margin-bottom: 3px; }
+        .foot .sig { margin-top: 14px; text-align: right; font-weight: 600; }
+      </style></head>
+      <body>
+        <div class="head">
+          <h1>${esc(sheet.header.manufacturer)} — ${esc(sheet.header.brand)}</h1>
+          <div class="sub">GUARANTEED TECHNICAL PARTICULARS</div>
+          <div class="sub">${esc(sheet.header.title)}</div>
+        </div>
+        <div class="meta">
+          ${sheet.header.customer ? `<div>Customer: ${esc(sheet.header.customer)}</div>` : ""}
+          ${sheet.header.project ? `<div>Project: ${esc(sheet.header.project)}</div>` : ""}
+          <div>Applicable Standards: ${esc(sheet.header.applicableStandards)}</div>
+        </div>
+        <table>
+          <thead><tr><th style="width:40px">S.No</th><th>Description</th><th style="width:70px">Unit</th><th>Value</th></tr></thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+        <div class="foot">
+          <div class="notes">
+            ${(sheet.footer?.notes ?? ["* OD is calculated for reference; actual OD varies per tolerance."]).map((n) => `<div>${esc(n)}</div>`).join("")}
+          </div>
+          <div class="sig">${esc(sheet.footer?.signatory ?? `FOR: ${sheet.header.manufacturer}`)}</div>
+        </div>
+      </body></html>`;
+
+    const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
     const page = await browser.newPage();
-
-    const htmlContent = `
-      <html>
-        <head>
-          <style>
-            body { font-family: 'Inter', sans-serif; color: #171717; padding: 40px; }
-            h1 { color: #3b82f6; font-size: 24px; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th, td { border: 1px solid #e5e7eb; padding: 12px; text-align: left; }
-            th { background-color: #f9fafb; font-weight: 600; width: 40%; }
-            .header { display: flex; justify-content: space-between; align-items: flex-end; }
-            .badge { background: #10b981; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1>Cable Technical Datasheet</h1>
-            <div>
-              <span class="badge">IS 7098 & IS 8130 Compliant</span>
-            </div>
-          </div>
-          <p><strong>Cable Description:</strong> ${data.cores} Core x ${data.area} sq.mm ${data.conductorName} Cable</p>
-          
-          <table>
-            <tbody>
-              <tr><th>Conductor Material</th><td>${data.conductorName}</td></tr>
-              <tr><th>Conductor Area</th><td>${data.area} mm²</td></tr>
-              <tr><th>Number of Cores</th><td>${data.cores}</td></tr>
-              <tr><th>Insulation Thickness</th><td>${data.insulationThk} mm</td></tr>
-              <tr><th>Inner Sheath Thickness</th><td>${data.innerSheathThk} mm</td></tr>
-              <tr><th>Armour Thickness</th><td>${data.armourThk} mm</td></tr>
-              <tr><th>Outer Sheath Thickness</th><td>${data.outerSheathThk} mm</td></tr>
-            </tbody>
-          </table>
-
-          <h2 style="margin-top: 40px; font-size: 18px;">Calculated Parameters</h2>
-          <table>
-            <tbody>
-              <tr><th>Approx Conductor Diameter</th><td>${data.condDia} mm</td></tr>
-              <tr><th>Overall Cable Diameter</th><td>${data.overallDia} mm</td></tr>
-              <tr><th>DC Resistance @ 20°C</th><td>${data.r20} Ω/km</td></tr>
-              <tr><th>AC Resistance @ 90°C</th><td>${data.r90} Ω/km</td></tr>
-              <tr><th>Short Circuit Rating (1s)</th><td>${data.scRating} kA</td></tr>
-            </tbody>
-          </table>
-          
-          <div style="margin-top: 50px; font-size: 12px; color: #6b7280; text-align: center;">
-            Generated by Parametric Cable Engine
-          </div>
-        </body>
-      </html>
-    `;
-
-    await page.setContent(htmlContent, { waitUntil: "networkidle0" });
-    
-    const pdfBuffer = await page.pdf({
-      format: "A4",
-      printBackground: true,
-      margin: { top: "20px", bottom: "20px", left: "20px", right: "20px" },
-    });
-
+    await page.setContent(html, { waitUntil: "networkidle0" });
+    const pdf = await page.pdf({ format: "A4", printBackground: true, margin: { top: "16px", bottom: "16px", left: "16px", right: "16px" } });
     await browser.close();
 
-    return new NextResponse(pdfBuffer, {
+    const safeName = (fileName ?? "GTP").replace(/[^a-zA-Z0-9]+/g, "_");
+    return new NextResponse(Buffer.from(pdf), {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="Datasheet_${data.cores}Cx${data.area}.pdf"`,
+        "Content-Disposition": `attachment; filename="GTP_${safeName}.pdf"`,
       },
     });
-  } catch (error: any) {
-    console.error("PDF Generation Error:", error);
+  } catch (error: unknown) {
+    console.error("PDF generation error:", error);
     return NextResponse.json({ error: "Failed to generate PDF" }, { status: 500 });
   }
 }

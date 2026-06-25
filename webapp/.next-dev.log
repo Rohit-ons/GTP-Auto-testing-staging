@@ -1,0 +1,57 @@
+
+> webapp@0.1.0 dev
+> next dev
+
+▲ Next.js 16.2.4 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.56.1:3000
+- Environments: .env
+✓ Ready in 2.4s
+
+ GET /design 200 in 2.6s (next.js: 916ms, application-code: 1657ms)
+ GET /design 200 in 767ms (next.js: 94ms, application-code: 673ms)
+ POST /design 200 in 305ms (next.js: 21ms, application-code: 284ms)
+  └─ ƒ previewGtp({"areaMain":185,"areaNeutral":95,"armourType":"FLAT_STRIP","...":"16 items not stringified"}, {}) in 163ms src/app/actions/gtp.ts
+ POST /design 200 in 305ms (next.js: 98ms, application-code: 207ms)
+  └─ ƒ previewGtp({"areaMain":185,"areaNeutral":95,"armourType":"FLAT_STRIP","...":"16 items not stringified"}, {}) in 147ms src/app/actions/gtp.ts
+ GET /design 200 in 259ms (next.js: 31ms, application-code: 229ms)
+ POST /design 200 in 118ms (next.js: 16ms, application-code: 102ms)
+  └─ ƒ previewGtp({"areaMain":185,"areaNeutral":95,"armourType":"FLAT_STRIP","...":"16 items not stringified"}, {}) in 32ms src/app/actions/gtp.ts
+ POST /design 200 in 71ms (next.js: 12ms, application-code: 60ms)
+  └─ ƒ previewGtp({"areaMain":0,"areaNeutral":95,"armourType":"FLAT_STRIP","...":"16 items not stringified"}, {}) in 28ms src/app/actions/gtp.ts
+ POST /design 200 in 73ms (next.js: 23ms, application-code: 50ms)
+  └─ ƒ previewGtp({"areaMain":400,"areaNeutral":95,"armourType":"FLAT_STRIP","...":"16 items not stringified"}, {}) in 20ms src/app/actions/gtp.ts
+ POST /design 200 in 112ms (next.js: 17ms, application-code: 95ms)
+  └─ ƒ previewGtp({"areaMain":400,"areaNeutral":null,"armourType":"FLAT_STRIP","...":"16 items not stringified"}, {}) in 31ms src/app/actions/gtp.ts
+ POST /design 200 in 50ms (next.js: 14ms, application-code: 36ms)
+  └─ ƒ previewGtp({"areaMain":400,"areaNeutral":null,"armourType":"FLAT_STRIP","...":"16 items not stringified"}, {}) in 9ms src/app/actions/gtp.ts
+ POST /design 200 in 35ms (next.js: 6ms, application-code: 29ms)
+  └─ ƒ previewGtp({"areaMain":0,"areaNeutral":null,"armourType":"FLAT_STRIP","...":"16 items not stringified"}, {}) in 10ms src/app/actions/gtp.ts
+ POST /design 200 in 32ms (next.js: 13ms, application-code: 19ms)
+  └─ ƒ previewGtp({"areaMain":2,"areaNeutral":null,"armourType":"FLAT_STRIP","...":"16 items not stringified"}, {}) in 6ms src/app/actions/gtp.ts
+ POST /design 200 in 22ms (next.js: 3ms, application-code: 19ms)
+  └─ ƒ previewGtp({"areaMain":2.5,"areaNeutral":null,"armourType":"FLAT_STRIP","...":"16 items not stringified"}, {}) in 8ms src/app/actions/gtp.ts
+ POST /design 200 in 28ms (next.js: 14ms, application-code: 15ms)
+  └─ ƒ previewGtp({"areaMain":2,"areaNeutral":null,"armourType":"FLAT_STRIP","...":"16 items not stringified"}, {}) in 6ms src/app/actions/gtp.ts
+ POST /design 200 in 28ms (next.js: 14ms, application-code: 14ms)
+  └─ ƒ previewGtp({"areaMain":0,"areaNeutral":null,"armourType":"FLAT_STRIP","...":"16 items not stringified"}, {}) in 5ms src/app/actions/gtp.ts
+ POST /design 200 in 25ms (next.js: 4ms, application-code: 20ms)
+  └─ ƒ previewGtp({"areaMain":0,"areaNeutral":null,"armourType":"FLAT_STRIP","...":"16 items not stringified"}, {}) in 8ms src/app/actions/gtp.ts
+ POST /design 200 in 26ms (next.js: 6ms, application-code: 20ms)
+  └─ ƒ previewGtp({"areaMain":10,"areaNeutral":null,"armourType":"FLAT_STRIP","...":"16 items not stringified"}, {}) in 8ms src/app/actions/gtp.ts
+ POST /design 200 in 35ms (next.js: 15ms, application-code: 20ms)
+  └─ ƒ previewGtp({"areaMain":1,"areaNeutral":null,"armourType":"FLAT_STRIP","...":"16 items not stringified"}, {}) in 7ms src/app/actions/gtp.ts
+ POST /design 200 in 30ms (next.js: 13ms, application-code: 16ms)
+  └─ ƒ previewGtp({"areaMain":11,"areaNeutral":null,"armourType":"FLAT_STRIP","...":"16 items not stringified"}, {}) in 6ms src/app/actions/gtp.ts
+ POST /design 200 in 31ms (next.js: 16ms, application-code: 15ms)
+  └─ ƒ previewGtp({"areaMain":118,"areaNeutral":null,"armourType":"FLAT_STRIP","...":"16 items not stringified"}, {}) in 5ms src/app/actions/gtp.ts
+ POST /design 200 in 19ms (next.js: 4ms, application-code: 15ms)
+  └─ ƒ previewGtp({"areaMain":1,"areaNeutral":null,"armourType":"FLAT_STRIP","...":"16 items not stringified"}, {}) in 7ms src/app/actions/gtp.ts
+ POST /design 200 in 19ms (next.js: 3ms, application-code: 16ms)
+  └─ ƒ previewGtp({"areaMain":18,"areaNeutral":null,"armourType":"FLAT_STRIP","...":"16 items not stringified"}, {}) in 6ms src/app/actions/gtp.ts
+ POST /design 200 in 37ms (next.js: 13ms, application-code: 23ms)
+  └─ ƒ previewGtp({"areaMain":185,"areaNeutral":null,"armourType":"FLAT_STRIP","...":"16 items not stringified"}, {}) in 9ms src/app/actions/gtp.ts
+ POST /design 200 in 33ms (next.js: 16ms, application-code: 17ms)
+  └─ ƒ previewGtp({"areaMain":185,"areaNeutral":null,"armourType":"FLAT_STRIP","...":"16 items not stringified"}, {}) in 6ms src/app/actions/gtp.ts
+ POST /design 200 in 34ms (next.js: 4ms, application-code: 30ms)
+  └─ ƒ previewGtp({"areaMain":185,"areaNeutral":null,"armourType":"FLAT_STRIP","...":"16 items not stringified"}, {}) in 6ms src/app/actions/gtp.ts
