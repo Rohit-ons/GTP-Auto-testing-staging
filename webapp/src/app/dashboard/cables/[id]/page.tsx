@@ -22,7 +22,7 @@ export default async function CableDetailPage({ params }: { params: Promise<{ id
 
   const sheet: GtpSheet | null = cable.computedJson ? JSON.parse(cable.computedJson) : null;
   const role = (session?.user as { role?: string })?.role;
-  const canApprove = !!session?.user && APPROVER_ROLES.includes(role);
+  const canApprove = !!session?.user && APPROVER_ROLES.includes(role ?? "");
   const auditLogs = await prisma.auditLog.findMany({
     where: { entity: "CableModel", entityId: id },
     orderBy: { createdAt: "desc" },
