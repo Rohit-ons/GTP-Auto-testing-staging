@@ -260,7 +260,11 @@ export default function StandardsClient({ data }: Props) {
                         <p style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Max DC Resistance @20°C + Min Wires</p>
                       </div>
                     </div>
-                    <div className="table-wrapper" style={{ border: "none", borderRadius: 0 }}>
+                    <div className="table-wrapper" style={{ border: "none", borderRadius: 0, overflow: "visible" }}>
+                      <form id="form-create-al-cond" action={createConductorSpec} style={{ display: "none" }}>
+                        <input type="hidden" name="standardId" value={selectedStandard} />
+                        <input type="hidden" name="material" value="AL" />
+                      </form>
                       <table className="table table-enhanced">
                         <thead><tr><th>Area mm²</th><th>Class</th><th>Shape</th><th>R Ω/km</th><th>Min Wires</th><th style={{ width: 120 }}>Actions</th></tr></thead>
                         <tbody>
@@ -269,14 +273,18 @@ export default function StandardsClient({ data }: Props) {
                               <td style={{ fontWeight: 600 }}>{s.area}</td>
                               <td><span className="badge badge-neutral">{s.conductorClass}</span></td>
                               <td style={{ color: "var(--text-secondary)", fontSize: "0.8125rem" }}>{s.shape}</td>
-                              <td colSpan={3}>
+                              <td>
+                                <form action={updateConductorSpec} id={`form-update-al-${s.id}`}>
+                                  <input type="hidden" name="id" value={s.id} />
+                                  <input {...cell} name="maxResistance20" defaultValue={s.maxResistance20} step="any" style={{ ...cell.style, width: "100%" }} />
+                                </form>
+                              </td>
+                              <td>
+                                <input {...cell} name="minWires" defaultValue={s.minWires} type="number" form={`form-update-al-${s.id}`} style={{ ...cell.style, width: "100%" }} />
+                              </td>
+                              <td>
                                 <div style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
-                                  <form action={updateConductorSpec} style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
-                                    <input type="hidden" name="id" value={s.id} />
-                                    <input {...cell} name="maxResistance20" defaultValue={s.maxResistance20} step="any" style={{ ...cell.style, width: "90px" }} />
-                                    <input {...cell} name="minWires" defaultValue={s.minWires} type="number" style={{ ...cell.style, width: "60px" }} />
-                                    <button type="submit" className="btn btn-primary btn-sm">Save</button>
-                                  </form>
+                                  <button type="submit" form={`form-update-al-${s.id}`} className="btn btn-primary btn-sm">Save</button>
                                   <form action={deleteConductorSpec.bind(null, s.id)}>
                                     <button type="submit" className="btn btn-danger btn-sm">Del</button>
                                   </form>
@@ -284,32 +292,34 @@ export default function StandardsClient({ data }: Props) {
                               </td>
                             </tr>
                           ))}
-                          {rows.length === 0 && <tr><td colSpan={6} style={{ textAlign: "center", padding: "2rem", color: "var(--text-muted)" }}>No parameters added yet. Add below.</td></tr>}
+                          {rows.length === 0 && <tr><td colSpan={6} style={{ textAlign: "center", padding: "2rem", color: "var(--text-muted)" }}>No parameters added yet.</td></tr>}
+                          <tr style={{ background: "var(--slate-50)" }}>
+                            <td><input {...cell} name="area" form="form-create-al-cond" placeholder="Area" step="any" style={{ ...cell.style, width: "100%" }} required /></td>
+                            <td>
+                              <select {...cell} name="conductorClass" form="form-create-al-cond" style={{ ...cell.style, width: "100%" }} required defaultValue="2">
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="5">5</option>
+                                <option value="6">6</option>
+                              </select>
+                            </td>
+                            <td>
+                              <select {...cell} name="shape" form="form-create-al-cond" style={{ ...cell.style, width: "100%" }} required defaultValue="CIRCULAR">
+                                <option value="CIRCULAR">CIRCULAR</option>
+                                <option value="SHAPED">SHAPED</option>
+                                <option value="FLEXIBLE">FLEXIBLE</option>
+                              </select>
+                            </td>
+                            <td><input {...cell} name="maxResistance20" form="form-create-al-cond" placeholder="R Ω/km" step="any" style={{ ...cell.style, width: "100%" }} required /></td>
+                            <td><input {...cell} name="minWires" form="form-create-al-cond" placeholder="Wires" type="number" style={{ ...cell.style, width: "100%" }} required /></td>
+                            <td>
+                              <button type="submit" form="form-create-al-cond" className="btn btn-primary btn-sm" style={{ width: "100%" }}>
+                                + Add
+                              </button>
+                            </td>
+                          </tr>
                         </tbody>
                       </table>
-                    </div>
-                    <div className="card-footer">
-                      <form action={createConductorSpec} style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
-                        <input type="hidden" name="standardId" value={selectedStandard} />
-                        <input type="hidden" name="material" value="AL" />
-                        <input {...cell} name="area" placeholder="Area mm²" step="any" style={{ ...cell.style, width: "80px" }} required />
-                        <select {...cell} name="conductorClass" style={{ ...cell.style, width: "70px" }} required>
-                          <option value="1">1</option>
-                          <option value="2" selected>2</option>
-                          <option value="5">5</option>
-                          <option value="6">6</option>
-                        </select>
-                        <select {...cell} name="shape" style={{ ...cell.style, width: "100px" }} required>
-                          <option value="CIRCULAR" selected>CIRCULAR</option>
-                          <option value="SHAPED">SHAPED</option>
-                          <option value="FLEXIBLE">FLEXIBLE</option>
-                        </select>
-                        <input {...cell} name="maxResistance20" placeholder="R Ω/km" step="any" style={{ ...cell.style, width: "80px" }} required />
-                        <input {...cell} name="minWires" placeholder="Wires" type="number" style={{ ...cell.style, width: "70px" }} required />
-                        <button type="submit" className="btn btn-primary btn-sm">
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg> Add
-                        </button>
-                      </form>
                     </div>
                   </>
                 );
@@ -326,7 +336,11 @@ export default function StandardsClient({ data }: Props) {
                         <p style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Max DC Resistance @20°C + Min Wires</p>
                       </div>
                     </div>
-                    <div className="table-wrapper" style={{ border: "none", borderRadius: 0 }}>
+                    <div className="table-wrapper" style={{ border: "none", borderRadius: 0, overflow: "visible" }}>
+                      <form id="form-create-cu-cond" action={createConductorSpec} style={{ display: "none" }}>
+                        <input type="hidden" name="standardId" value={selectedStandard} />
+                        <input type="hidden" name="material" value="CU" />
+                      </form>
                       <table className="table table-enhanced">
                         <thead><tr><th>Area mm²</th><th>Class</th><th>Shape</th><th>R Ω/km</th><th>Min Wires</th><th style={{ width: 120 }}>Actions</th></tr></thead>
                         <tbody>
@@ -335,14 +349,18 @@ export default function StandardsClient({ data }: Props) {
                               <td style={{ fontWeight: 600 }}>{s.area}</td>
                               <td><span className="badge badge-neutral">{s.conductorClass}</span></td>
                               <td style={{ color: "var(--text-secondary)", fontSize: "0.8125rem" }}>{s.shape}</td>
-                              <td colSpan={3}>
+                              <td>
+                                <form action={updateConductorSpec} id={`form-update-cu-${s.id}`}>
+                                  <input type="hidden" name="id" value={s.id} />
+                                  <input {...cell} name="maxResistance20" defaultValue={s.maxResistance20} step="any" style={{ ...cell.style, width: "100%" }} />
+                                </form>
+                              </td>
+                              <td>
+                                <input {...cell} name="minWires" defaultValue={s.minWires} type="number" form={`form-update-cu-${s.id}`} style={{ ...cell.style, width: "100%" }} />
+                              </td>
+                              <td>
                                 <div style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
-                                  <form action={updateConductorSpec} style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
-                                    <input type="hidden" name="id" value={s.id} />
-                                    <input {...cell} name="maxResistance20" defaultValue={s.maxResistance20} step="any" style={{ ...cell.style, width: "90px" }} />
-                                    <input {...cell} name="minWires" defaultValue={s.minWires} type="number" style={{ ...cell.style, width: "60px" }} />
-                                    <button type="submit" className="btn btn-primary btn-sm">Save</button>
-                                  </form>
+                                  <button type="submit" form={`form-update-cu-${s.id}`} className="btn btn-primary btn-sm">Save</button>
                                   <form action={deleteConductorSpec.bind(null, s.id)}>
                                     <button type="submit" className="btn btn-danger btn-sm">Del</button>
                                   </form>
@@ -350,32 +368,34 @@ export default function StandardsClient({ data }: Props) {
                               </td>
                             </tr>
                           ))}
-                          {rows.length === 0 && <tr><td colSpan={6} style={{ textAlign: "center", padding: "2rem", color: "var(--text-muted)" }}>No parameters added yet. Add below.</td></tr>}
+                          {rows.length === 0 && <tr><td colSpan={6} style={{ textAlign: "center", padding: "2rem", color: "var(--text-muted)" }}>No parameters added yet.</td></tr>}
+                          <tr style={{ background: "var(--slate-50)" }}>
+                            <td><input {...cell} name="area" form="form-create-cu-cond" placeholder="Area" step="any" style={{ ...cell.style, width: "100%" }} required /></td>
+                            <td>
+                              <select {...cell} name="conductorClass" form="form-create-cu-cond" style={{ ...cell.style, width: "100%" }} required defaultValue="2">
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="5">5</option>
+                                <option value="6">6</option>
+                              </select>
+                            </td>
+                            <td>
+                              <select {...cell} name="shape" form="form-create-cu-cond" style={{ ...cell.style, width: "100%" }} required defaultValue="CIRCULAR">
+                                <option value="CIRCULAR">CIRCULAR</option>
+                                <option value="SHAPED">SHAPED</option>
+                                <option value="FLEXIBLE">FLEXIBLE</option>
+                              </select>
+                            </td>
+                            <td><input {...cell} name="maxResistance20" form="form-create-cu-cond" placeholder="R Ω/km" step="any" style={{ ...cell.style, width: "100%" }} required /></td>
+                            <td><input {...cell} name="minWires" form="form-create-cu-cond" placeholder="Wires" type="number" style={{ ...cell.style, width: "100%" }} required /></td>
+                            <td>
+                              <button type="submit" form="form-create-cu-cond" className="btn btn-primary btn-sm" style={{ width: "100%" }}>
+                                + Add
+                              </button>
+                            </td>
+                          </tr>
                         </tbody>
                       </table>
-                    </div>
-                    <div className="card-footer">
-                      <form action={createConductorSpec} style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
-                        <input type="hidden" name="standardId" value={selectedStandard} />
-                        <input type="hidden" name="material" value="CU" />
-                        <input {...cell} name="area" placeholder="Area mm²" step="any" style={{ ...cell.style, width: "80px" }} required />
-                        <select {...cell} name="conductorClass" style={{ ...cell.style, width: "70px" }} required>
-                          <option value="1">1</option>
-                          <option value="2" selected>2</option>
-                          <option value="5">5</option>
-                          <option value="6">6</option>
-                        </select>
-                        <select {...cell} name="shape" style={{ ...cell.style, width: "100px" }} required>
-                          <option value="CIRCULAR" selected>CIRCULAR</option>
-                          <option value="SHAPED">SHAPED</option>
-                          <option value="FLEXIBLE">FLEXIBLE</option>
-                        </select>
-                        <input {...cell} name="maxResistance20" placeholder="R Ω/km" step="any" style={{ ...cell.style, width: "80px" }} required />
-                        <input {...cell} name="minWires" placeholder="Wires" type="number" style={{ ...cell.style, width: "70px" }} required />
-                        <button type="submit" className="btn btn-primary btn-sm">
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg> Add
-                        </button>
-                      </form>
                     </div>
                   </>
                 );
