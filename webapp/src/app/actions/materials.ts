@@ -62,9 +62,9 @@ export async function bulkImportMaterials(materials: { name?: string; code?: str
         update: {},
         create: {
           code, name, category: m.category ?? "CONDUCTOR",
-          density: m.density ? parseFloat(m.density) : null,
-          resistivity20: m.resistivity20 ? parseFloat(m.resistivity20) : null,
-          alpha: m.alpha ? parseFloat(m.alpha) : null,
+          density: m.density ? parseFloat(String(m.density)) : null,
+          resistivity20: m.resistivity20 ? parseFloat(String(m.resistivity20)) : null,
+          alpha: m.alpha ? parseFloat(String(m.alpha)) : null,
         },
       });
       count++;
