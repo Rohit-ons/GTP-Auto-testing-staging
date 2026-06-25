@@ -292,11 +292,22 @@ export default function StandardsClient({ data }: Props) {
                       <form action={createConductorSpec} style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
                         <input type="hidden" name="standardId" value={selectedStandard} />
                         <input type="hidden" name="material" value="AL" />
-                        <input {...cell} name="area" placeholder="Area mm²" step="any" style={{ ...cell.style, width: "110px" }} required />
-                        <input {...cell} name="maxResistance20" placeholder="R Ω/km" step="any" style={{ ...cell.style, width: "110px" }} required />
-                        <input {...cell} name="minWires" placeholder="Wires" type="number" style={{ ...cell.style, width: "90px" }} required />
+                        <input {...cell} name="area" placeholder="Area mm²" step="any" style={{ ...cell.style, width: "80px" }} required />
+                        <select {...cell} name="conductorClass" style={{ ...cell.style, width: "70px" }} required>
+                          <option value="1">1</option>
+                          <option value="2" selected>2</option>
+                          <option value="5">5</option>
+                          <option value="6">6</option>
+                        </select>
+                        <select {...cell} name="shape" style={{ ...cell.style, width: "100px" }} required>
+                          <option value="CIRCULAR" selected>CIRCULAR</option>
+                          <option value="SHAPED">SHAPED</option>
+                          <option value="FLEXIBLE">FLEXIBLE</option>
+                        </select>
+                        <input {...cell} name="maxResistance20" placeholder="R Ω/km" step="any" style={{ ...cell.style, width: "80px" }} required />
+                        <input {...cell} name="minWires" placeholder="Wires" type="number" style={{ ...cell.style, width: "70px" }} required />
                         <button type="submit" className="btn btn-primary btn-sm">
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg> Add Parameter
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg> Add
                         </button>
                       </form>
                     </div>
@@ -347,11 +358,22 @@ export default function StandardsClient({ data }: Props) {
                       <form action={createConductorSpec} style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
                         <input type="hidden" name="standardId" value={selectedStandard} />
                         <input type="hidden" name="material" value="CU" />
-                        <input {...cell} name="area" placeholder="Area mm²" step="any" style={{ ...cell.style, width: "110px" }} required />
-                        <input {...cell} name="maxResistance20" placeholder="R Ω/km" step="any" style={{ ...cell.style, width: "110px" }} required />
-                        <input {...cell} name="minWires" placeholder="Wires" type="number" style={{ ...cell.style, width: "90px" }} required />
+                        <input {...cell} name="area" placeholder="Area mm²" step="any" style={{ ...cell.style, width: "80px" }} required />
+                        <select {...cell} name="conductorClass" style={{ ...cell.style, width: "70px" }} required>
+                          <option value="1">1</option>
+                          <option value="2" selected>2</option>
+                          <option value="5">5</option>
+                          <option value="6">6</option>
+                        </select>
+                        <select {...cell} name="shape" style={{ ...cell.style, width: "100px" }} required>
+                          <option value="CIRCULAR" selected>CIRCULAR</option>
+                          <option value="SHAPED">SHAPED</option>
+                          <option value="FLEXIBLE">FLEXIBLE</option>
+                        </select>
+                        <input {...cell} name="maxResistance20" placeholder="R Ω/km" step="any" style={{ ...cell.style, width: "80px" }} required />
+                        <input {...cell} name="minWires" placeholder="Wires" type="number" style={{ ...cell.style, width: "70px" }} required />
                         <button type="submit" className="btn btn-primary btn-sm">
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg> Add Parameter
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg> Add
                         </button>
                       </form>
                     </div>

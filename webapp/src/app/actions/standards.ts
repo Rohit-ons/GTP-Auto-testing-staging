@@ -89,11 +89,13 @@ export async function createConductorSpec(formData: FormData): Promise<void> {
   const userId = await requireAdmin();
   const standardId = String(formData.get("standardId"));
   const material = String(formData.get("material"));
+  const conductorClass = String(formData.get("conductorClass") || "2");
+  const shape = String(formData.get("shape") || "CIRCULAR");
   const area = (parseFloat(String(formData.get("area"))) || 0);
   const maxResistance20 = (parseFloat(String(formData.get("maxResistance20"))) || 0);
   const minWires = (parseInt(String(formData.get("minWires")), 10) || 0);
   const created = await prisma.conductorSpec.create({
-    data: { standardId, material, conductorClass: "2", shape: "CIRCULAR", area, maxResistance20, minWires },
+    data: { standardId, material, conductorClass, shape, area, maxResistance20, minWires },
   });
   await audit(userId, "ConductorSpec", created.id, "CREATE", undefined, undefined, `${material} ${area}mm²`);
   revalidatePath("/dashboard/standards");
