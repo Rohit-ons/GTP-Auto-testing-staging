@@ -155,7 +155,7 @@ export function buildGtp(input: CableInput, std: StandardsProvider, overrides: O
     "conductor.shape": () => `${shapeLabel(input.conductorShape)} ${condMat?.name ?? ""} Conductor Class - ${input.conductorClass}`.trim(),
     "conductor.tempNormal": () => `${temp.normal}°C`,
     "conductor.tempSc": () => `${temp.shortCircuit}°C`,
-    "insulation.material": () => insMaterialText,
+    "insulation.material": () => insMat?.gtpText ?? insMat?.name ?? input.insulationCode,
     "insulation.type": () => `Extruded ${insType}`,
     "insulation.thickness": () => insThkVal,
     "insulation.coreId": () => coreColours,
