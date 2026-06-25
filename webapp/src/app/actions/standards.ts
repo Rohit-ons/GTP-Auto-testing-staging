@@ -77,8 +77,8 @@ export async function deleteStandard(id: string): Promise<{ success: boolean; er
 export async function updateConductorSpec(formData: FormData): Promise<void> {
   const userId = await requireAdmin();
   const id = String(formData.get("id"));
-  const maxResistance20 = parseFloat(String(formData.get("maxResistance20")));
-  const minWires = parseInt(String(formData.get("minWires")), 10);
+  const maxResistance20 = (parseFloat(String(formData.get("maxResistance20"))) || 0);
+  const minWires = (parseInt(String(formData.get("minWires")), 10) || 0);
   const prev = await prisma.conductorSpec.findUnique({ where: { id } });
   await prisma.conductorSpec.update({ where: { id }, data: { maxResistance20, minWires } });
   await audit(userId, "ConductorSpec", id, "UPDATE", "maxResistance20", String(prev?.maxResistance20), String(maxResistance20));
@@ -89,9 +89,9 @@ export async function createConductorSpec(formData: FormData): Promise<void> {
   const userId = await requireAdmin();
   const standardId = String(formData.get("standardId"));
   const material = String(formData.get("material"));
-  const area = parseFloat(String(formData.get("area")));
-  const maxResistance20 = parseFloat(String(formData.get("maxResistance20")));
-  const minWires = parseInt(String(formData.get("minWires")), 10);
+  const area = (parseFloat(String(formData.get("area"))) || 0);
+  const maxResistance20 = (parseFloat(String(formData.get("maxResistance20"))) || 0);
+  const minWires = (parseInt(String(formData.get("minWires")), 10) || 0);
   const created = await prisma.conductorSpec.create({
     data: { standardId, material, conductorClass: "2", shape: "CIRCULAR", area, maxResistance20, minWires },
   });
@@ -110,7 +110,7 @@ export async function deleteConductorSpec(id: string): Promise<void> {
 export async function updateInsulationSpec(formData: FormData): Promise<void> {
   const userId = await requireAdmin();
   const id = String(formData.get("id"));
-  const nominalThickness = parseFloat(String(formData.get("nominalThickness")));
+  const nominalThickness = (parseFloat(String(formData.get("nominalThickness"))) || 0);
   const prev = await prisma.insulationSpec.findUnique({ where: { id } });
   await prisma.insulationSpec.update({ where: { id }, data: { nominalThickness } });
   await audit(userId, "InsulationSpec", id, "UPDATE", "nominalThickness", String(prev?.nominalThickness), String(nominalThickness));
@@ -121,10 +121,10 @@ export async function createInsulationSpec(formData: FormData): Promise<void> {
   const userId = await requireAdmin();
   const standardId = String(formData.get("standardId"));
   const insulationType = String(formData.get("insulationType"));
-  const voltage = parseFloat(String(formData.get("voltage")));
-  const areaMin = parseFloat(String(formData.get("areaMin")));
-  const areaMax = parseFloat(String(formData.get("areaMax")));
-  const nominalThickness = parseFloat(String(formData.get("nominalThickness")));
+  const voltage = (parseFloat(String(formData.get("voltage"))) || 0);
+  const areaMin = (parseFloat(String(formData.get("areaMin"))) || 0);
+  const areaMax = (parseFloat(String(formData.get("areaMax"))) || 0);
+  const nominalThickness = (parseFloat(String(formData.get("nominalThickness"))) || 0);
   const created = await prisma.insulationSpec.create({
     data: { standardId, insulationType, voltage, areaMin, areaMax, nominalThickness },
   });
@@ -143,7 +143,7 @@ export async function deleteInsulationSpec(id: string): Promise<void> {
 export async function updateInnerSheathSpec(formData: FormData): Promise<void> {
   const userId = await requireAdmin();
   const id = String(formData.get("id"));
-  const minThickness = parseFloat(String(formData.get("minThickness")));
+  const minThickness = (parseFloat(String(formData.get("minThickness"))) || 0);
   const prev = await prisma.innerSheathSpec.findUnique({ where: { id } });
   await prisma.innerSheathSpec.update({ where: { id }, data: { minThickness } });
   await audit(userId, "InnerSheathSpec", id, "UPDATE", "minThickness", String(prev?.minThickness), String(minThickness));
@@ -153,9 +153,9 @@ export async function updateInnerSheathSpec(formData: FormData): Promise<void> {
 export async function createInnerSheathSpec(formData: FormData): Promise<void> {
   const userId = await requireAdmin();
   const standardId = String(formData.get("standardId"));
-  const diaMin = parseFloat(String(formData.get("diaMin")));
-  const diaMax = parseFloat(String(formData.get("diaMax")));
-  const minThickness = parseFloat(String(formData.get("minThickness")));
+  const diaMin = (parseFloat(String(formData.get("diaMin"))) || 0);
+  const diaMax = (parseFloat(String(formData.get("diaMax"))) || 0);
+  const minThickness = (parseFloat(String(formData.get("minThickness"))) || 0);
   const created = await prisma.innerSheathSpec.create({
     data: { standardId, diaMin, diaMax, minThickness },
   });
@@ -174,8 +174,8 @@ export async function deleteInnerSheathSpec(id: string): Promise<void> {
 export async function updateOuterSheathSpec(formData: FormData): Promise<void> {
   const userId = await requireAdmin();
   const id = String(formData.get("id"));
-  const minThickness = parseFloat(String(formData.get("minThickness")));
-  const nominalThickness = parseFloat(String(formData.get("nominalThickness")));
+  const minThickness = (parseFloat(String(formData.get("minThickness"))) || 0);
+  const nominalThickness = (parseFloat(String(formData.get("nominalThickness"))) || 0);
   const prev = await prisma.outerSheathSpec.findUnique({ where: { id } });
   await prisma.outerSheathSpec.update({ where: { id }, data: { minThickness, nominalThickness } });
   await audit(userId, "OuterSheathSpec", id, "UPDATE", "minThickness", String(prev?.minThickness), String(minThickness));
@@ -185,10 +185,10 @@ export async function updateOuterSheathSpec(formData: FormData): Promise<void> {
 export async function createOuterSheathSpec(formData: FormData): Promise<void> {
   const userId = await requireAdmin();
   const standardId = String(formData.get("standardId"));
-  const diaMin = parseFloat(String(formData.get("diaMin")));
-  const diaMax = parseFloat(String(formData.get("diaMax")));
-  const nominalThickness = parseFloat(String(formData.get("nominalThickness")));
-  const minThickness = parseFloat(String(formData.get("minThickness")));
+  const diaMin = (parseFloat(String(formData.get("diaMin"))) || 0);
+  const diaMax = (parseFloat(String(formData.get("diaMax"))) || 0);
+  const nominalThickness = (parseFloat(String(formData.get("nominalThickness"))) || 0);
+  const minThickness = (parseFloat(String(formData.get("minThickness"))) || 0);
   const created = await prisma.outerSheathSpec.create({
     data: { standardId, diaMin, diaMax, nominalThickness, minThickness },
   });
@@ -208,7 +208,7 @@ export async function updateArmourSpec(formData: FormData): Promise<void> {
   const userId = await requireAdmin();
   const id = String(formData.get("id"));
   const dimension = String(formData.get("dimension"));
-  const nominalDim = parseFloat(String(formData.get("nominalDim")));
+  const nominalDim = (parseFloat(String(formData.get("nominalDim"))) || 0);
   const prev = await prisma.armourSpec.findUnique({ where: { id } });
   await prisma.armourSpec.update({ where: { id }, data: { dimension, nominalDim } });
   await audit(userId, "ArmourSpec", id, "UPDATE", "dimension", prev?.dimension, dimension);
@@ -219,10 +219,10 @@ export async function createArmourSpec(formData: FormData): Promise<void> {
   const userId = await requireAdmin();
   const standardId = String(formData.get("standardId"));
   const armourType = String(formData.get("armourType"));
-  const diaMin = parseFloat(String(formData.get("diaMin")));
-  const diaMax = parseFloat(String(formData.get("diaMax")));
+  const diaMin = (parseFloat(String(formData.get("diaMin"))) || 0);
+  const diaMax = (parseFloat(String(formData.get("diaMax"))) || 0);
   const dimension = String(formData.get("dimension"));
-  const nominalDim = parseFloat(String(formData.get("nominalDim")));
+  const nominalDim = (parseFloat(String(formData.get("nominalDim"))) || 0);
   const created = await prisma.armourSpec.create({
     data: { standardId, armourType, diaMin, diaMax, dimension, nominalDim },
   });
